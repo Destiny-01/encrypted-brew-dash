@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -46,6 +47,16 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        // Custom magical theme colors
+        magic: {
+          purple: "hsl(var(--magic-purple))",
+          gold: "hsl(var(--magic-gold))",
+          glow: "hsl(var(--magic-glow))",
+        },
+        potion: {
+          bg: "hsl(var(--potion-bg))",
+          selected: "hsl(var(--potion-selected))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -80,10 +91,26 @@ export default {
             height: "0",
           },
         },
+        // Magical animations for potions
+        "float": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "glow": {
+          "0%": { boxShadow: "0 0 10px hsl(270 91% 65% / 0.3)" },
+          "100%": { boxShadow: "0 0 20px hsl(270 100% 75% / 0.6)" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 3s ease-in-out infinite",
+        "glow": "glow 2s ease-in-out infinite alternate",
+        "shimmer": "shimmer 3s ease-in-out infinite",
       },
     },
   },
