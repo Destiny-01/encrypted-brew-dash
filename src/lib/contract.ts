@@ -1,6 +1,8 @@
 // Contract utilities for Encrypted Potion Leaderboard
 // This file contains all blockchain interaction logic
 
+import { toast } from '@/hooks/use-toast';
+
 export interface LeaderboardEntry {
   rank: number;
   address: string;
@@ -74,24 +76,139 @@ export const connectContract = async () => {
 };
 
 /**
- * Submit potion combination for scoring
- * TODO: Integrate with Zama encryption and contract call
+ * Decrypt encrypted data from Zama FHE
+ * This function will decrypt the encrypted result from ComputeResult event
+ * @param encryptedData - The encrypted data to decrypt
+ * @returns Decrypted number value
  */
-export const submitPotion = async (potions: number[]): Promise<{ success: boolean; score?: number; error?: string }> => {
+export const decryptResult = async (encryptedData: string | Uint8Array): Promise<number> => {
   try {
-    console.log('TODO: Implement Zama encryption for potions:', potions);
+    // TODO: Implement actual Zama decryption
+    // For now, this is a placeholder that you'll replace with:
+    // const decrypted = await fhevm.decrypt(encryptedData);
     
-    // Mock scoring logic (will be replaced with encrypted contract call)
-    const mockScore = potions.reduce((sum, potionId) => sum + (potionId * 100), 0) + 
-                     Math.floor(Math.random() * 500); // Add some randomness
-                     
-    // Simulate network delay
+    console.log('TODO: Decrypt using Zama FHE SDK:', encryptedData);
+    
+    // Mock decryption - returns a random score
+    // Replace this with actual decryption call
+    const mockDecryptedValue = Math.floor(Math.random() * 3000) + 500;
+    
+    return mockDecryptedValue;
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('Failed to decrypt result');
+  }
+};
+
+/**
+ * Decrypt leaderboard entry
+ * Leaderboard scores are also encrypted and need to be decrypted
+ * @param encryptedScore - The encrypted score to decrypt
+ * @returns Decrypted score
+ */
+export const decryptLeaderboardScore = async (encryptedScore: string | Uint8Array): Promise<number> => {
+  try {
+    // TODO: Implement actual Zama decryption for leaderboard
+    console.log('TODO: Decrypt leaderboard score using Zama FHE SDK:', encryptedScore);
+    
+    // Mock decryption
+    // Replace this with actual decryption call
+    const mockDecryptedValue = Math.floor(Math.random() * 3000) + 500;
+    
+    return mockDecryptedValue;
+  } catch (error) {
+    console.error('Leaderboard decryption failed:', error);
+    throw new Error('Failed to decrypt leaderboard score');
+  }
+};
+
+/**
+ * Listen for ComputeResult event from the contract
+ * @param callback - Function to call when event is received
+ * @returns Cleanup function to stop listening
+ */
+export const listenForComputeResult = (
+  callback: (encryptedResult: string, address: string) => void
+): (() => void) => {
+  // TODO: Implement actual contract event listener
+  // Example structure:
+  // const contract = getContract();
+  // contract.on('ComputeResult', (encryptedResult, userAddress) => {
+  //   callback(encryptedResult, userAddress);
+  // });
+  
+  console.log('TODO: Set up event listener for ComputeResult event');
+  
+  // Mock event listener - simulates receiving an event after delay
+  const mockEventTimeout = setTimeout(() => {
+    const mockEncryptedResult = '0x' + Math.random().toString(16).substring(2, 18);
+    callback(mockEncryptedResult, '0x742d35Cc6634C0532925a3b8A045c7f4B2E3a8F5');
+  }, 2000);
+  
+  // Return cleanup function
+  return () => {
+    console.log('Cleaning up ComputeResult event listener');
+    clearTimeout(mockEventTimeout);
+    // TODO: Remove actual contract event listener
+    // contract.off('ComputeResult', callback);
+  };
+};
+
+/**
+ * Submit potion combination for scoring
+ * Integrates with contract and listens for ComputeResult event
+ */
+export const submitPotion = async (
+  potions: number[],
+  userAddress?: string
+): Promise<{ success: boolean; score?: number; error?: string }> => {
+  try {
+    console.log('Submitting potions to contract:', potions);
+    
+    // TODO: Replace with actual contract call
+    // Example:
+    // const contract = await connectContract();
+    // const tx = await contract.submitPotionCombination(potions);
+    // await tx.wait();
+    
+    // Simulate network delay for contract interaction
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    return {
-      success: true,
-      score: mockScore,
-    };
+    // Listen for ComputeResult event
+    return new Promise((resolve) => {
+      const cleanup = listenForComputeResult(async (encryptedResult, address) => {
+        try {
+          // Only process if it's for the current user
+          if (userAddress && address.toLowerCase() !== userAddress.toLowerCase()) {
+            return;
+          }
+          
+          // Decrypt the result
+          const decryptedScore = await decryptResult(encryptedResult);
+          
+          cleanup(); // Stop listening
+          resolve({
+            success: true,
+            score: decryptedScore,
+          });
+        } catch (error) {
+          cleanup();
+          resolve({
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to decrypt result',
+          });
+        }
+      });
+      
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        cleanup();
+        resolve({
+          success: false,
+          error: 'Timeout waiting for result',
+        });
+      }, 30000);
+    });
   } catch (error) {
     return {
       success: false,
@@ -102,13 +219,31 @@ export const submitPotion = async (potions: number[]): Promise<{ success: boolea
 
 /**
  * Get current leaderboard data
- * TODO: Replace with actual contract call
+ * Fetches and decrypts leaderboard scores
  */
 export const getLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  return MOCK_LEADERBOARD;
+  try {
+    // TODO: Replace with actual contract call
+    // Example:
+    // const contract = await connectContract();
+    // const encryptedLeaderboard = await contract.getLeaderboard();
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // TODO: Decrypt all scores in the leaderboard
+    // const decryptedLeaderboard = await Promise.all(
+    //   encryptedLeaderboard.map(async (entry) => ({
+    //     ...entry,
+    //     score: await decryptLeaderboardScore(entry.encryptedScore)
+    //   }))
+    // );
+    
+    return MOCK_LEADERBOARD;
+  } catch (error) {
+    console.error('Failed to fetch leaderboard:', error);
+    return [];
+  }
 };
 
 /**

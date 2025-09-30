@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { POTIONS, shufflePotions, getRarityColor, getRarityBorder, type Potion } from '@/lib/potions';
+import { POTIONS, shufflePotions, type Potion } from '@/lib/potions';
 import { Check } from 'lucide-react';
 
 interface PotionGridProps {
@@ -29,8 +28,7 @@ export const PotionGrid = ({ selectedPotions, onPotionSelect, disabled = false }
             key={potion.id}
             className={`
               potion-card cursor-pointer transition-all duration-300 hover:scale-105 relative
-              ${isSelected ? 'potion-selected' : 'hover:shadow-lg'}
-              ${getRarityBorder(potion.rarity)}
+              ${isSelected ? 'potion-selected border-magic-purple' : 'hover:shadow-lg'}
               ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}
             onClick={() => !disabled && onPotionSelect(potion.id)}
@@ -53,16 +51,9 @@ export const PotionGrid = ({ selectedPotions, onPotionSelect, disabled = false }
                 />
               </div>
               
-              <h3 className="font-semibold text-sm mb-1 text-foreground">
+              <h3 className="font-semibold text-sm mb-2 text-foreground">
                 {potion.name}
               </h3>
-              
-              <Badge 
-                variant="secondary" 
-                className={`${getRarityColor(potion.rarity)} mb-2 text-xs`}
-              >
-                {potion.rarity}
-              </Badge>
               
               <p className="text-xs text-muted-foreground leading-tight">
                 {potion.description}

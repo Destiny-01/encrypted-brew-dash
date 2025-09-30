@@ -26,6 +26,9 @@ export const Game = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [lastScore, setLastScore] = useState<number | null>(null);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+  
+  const MAX_SELECTION = 5;
 
   // Fetch user stats when connected
   useEffect(() => {
@@ -38,8 +41,15 @@ export const Game = () => {
     setSelectedPotions(prev => {
       if (prev.includes(potionId)) {
         return prev.filter(id => id !== potionId);
-      } else {
+      } else if (prev.length < MAX_SELECTION) {
         return [...prev, potionId];
+      } else {
+        toast({
+          title: "Maximum potions selected",
+          description: `You can only select up to ${MAX_SELECTION} potions!`,
+          variant: "destructive",
+        });
+        return prev;
       }
     });
   };
@@ -55,16 +65,29 @@ export const Game = () => {
     }
 
     setIsSubmitting(true);
+    setIsNewHighScore(false);
     
     try {
-      const result = await submitPotion(selectedPotions);
+      const result = await submitPotion(selectedPotions, address);
       
-      if (result.success && result.score) {
+      if (result.success && result.score !== undefined) {
+        const previousHighScore = userStats?.highestScore || 0;
+        const isHighScore = result.score > previousHighScore;
+        
         setLastScore(result.score);
-        toast({
-          title: "Potion Brewed Successfully! 🧪",
-          description: `You scored ${result.score.toLocaleString()} points!`,
-        });
+        setIsNewHighScore(isHighScore);
+        
+        if (isHighScore) {
+          toast({
+            title: "🎉 NEW HIGH SCORE! 🎉",
+            description: `Legendary brew! You scored ${result.score.toLocaleString()} points!`,
+          });
+        } else {
+          toast({
+            title: "Potion Brewed",
+            description: `You scored ${result.score.toLocaleString()} points. Keep experimenting to beat your high score!`,
+          });
+        }
         
         // Update user stats if connected
         if (address && isConnected) {
@@ -141,14 +164,12 @@ export const Game = () => {
                   <CardTitle className="flex items-center gap-3">
                     <Sparkles className="h-6 w-6 text-magic-gold" />
                     Mix Your Potion
-                    {selectedPotions.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {selectedPotions.length} selected
-                      </Badge>
-                    )}
+                    <Badge variant="secondary" className="ml-auto">
+                      {selectedPotions.length}/{MAX_SELECTION}
+                    </Badge>
                   </CardTitle>
                   <p className="text-muted-foreground">
-                    Select potions to combine them into a powerful elixir. Each combination yields different scores!
+                    Select up to {MAX_SELECTION} potions to combine into a powerful elixir. Each unique combination yields different scores!
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -158,7 +179,7 @@ export const Game = () => {
                     disabled={isSubmitting}
                   />
                   
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-6 flex flex-col items-center gap-4">
                     <Button
                       onClick={handleBrewPotion}
                       disabled={selectedPotions.length === 0 || isSubmitting}
@@ -168,37 +189,43 @@ export const Game = () => {
                       {isSubmitting ? (
                         <>
                           <Loader2 className="h-5 w-5 animate-spin" />
-                          Brewing...
+                          Brewing Your Potion...
                         </>
                       ) : (
                         <>
                           <Beaker className="h-5 w-5" />
-                          Brew Potion ({selectedPotions.length})
+                          Brew Potion ({selectedPotions.length}/{MAX_SELECTION})
                         </>
                       )}
                     </Button>
-                  </div>
-                  
-                  {/* TODO: Zama encryption notice */}
-                  <div className="mt-4 p-3 bg-muted/30 rounded-lg border border-border/50">
-                    <p className="text-xs text-muted-foreground text-center">
-                      🔒 <strong>Coming Soon:</strong> Your potion combinations will be encrypted using Zama's FHE technology before scoring
-                    </p>
+                    
+                    {isSubmitting && (
+                      <p className="text-sm text-muted-foreground animate-pulse">
+                        🔮 Mixing magical ingredients...
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
               {/* Last Score Display */}
-              {lastScore && (
-                <Card className="potion-card animate-glow">
+              {lastScore !== null && (
+                <Card className={`potion-card ${isNewHighScore ? 'animate-glow border-magic-gold' : ''}`}>
                   <CardContent className="p-6 text-center">
                     <div className="mb-2">
-                      <Trophy className="h-8 w-8 text-magic-gold mx-auto" />
+                      <Trophy className={`h-8 w-8 mx-auto ${isNewHighScore ? 'text-magic-gold' : 'text-muted-foreground'}`} />
                     </div>
-                    <h3 className="text-2xl font-bold text-magic-gold mb-1">
-                      Latest Score: {lastScore.toLocaleString()}
+                    <h3 className={`text-2xl font-bold mb-1 ${isNewHighScore ? 'text-magic-gold' : 'text-foreground'}`}>
+                      {isNewHighScore ? '🎉 NEW HIGH SCORE! 🎉' : 'Latest Score'}
                     </h3>
-                    <p className="text-muted-foreground">Your brewing mastery grows stronger!</p>
+                    <p className="text-3xl font-bold text-magic-purple mb-2">
+                      {lastScore.toLocaleString()}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {isNewHighScore 
+                        ? 'Legendary brew! You\'ve surpassed your previous best!' 
+                        : 'Keep experimenting with different combinations!'}
+                    </p>
                   </CardContent>
                 </Card>
               )}

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Medal } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Crown, Trophy, Medal, Loader2 } from 'lucide-react';
 import { getLeaderboard, type LeaderboardEntry } from '@/lib/contract';
 
 interface LeaderboardProps {
@@ -43,18 +44,28 @@ export const Leaderboard = ({ title = "Leaderboard", showTop = 5 }: LeaderboardP
 
   if (isLoading) {
     return (
-      <Card className="potion-card animate-glow">
+      <Card className="potion-card">
         <CardHeader>
           <CardTitle className="text-center">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 animate-pulse">
-                <div className="h-4 bg-muted/40 rounded w-1/3"></div>
-                <div className="h-4 bg-muted/40 rounded w-1/4"></div>
+              <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3 flex-1">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-16" />
               </div>
             ))}
+            <div className="flex items-center justify-center gap-2 pt-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading leaderboard...
+            </div>
           </div>
         </CardContent>
       </Card>
