@@ -1,11 +1,32 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { WalletConnect } from '@/components/WalletConnect';
-import { Leaderboard } from '@/components/Leaderboard';
-import { Sparkles, Beaker, Target } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WalletButton } from "@/components/WalletConnect";
+import { Leaderboard } from "@/components/Leaderboard";
+import { Sparkles, Beaker, Target } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LeaderboardEntry } from "@/lib/contract";
+import { usePotionContract } from "@/hooks/usePotionContract";
 
 export const Landing = () => {
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const { fetchLeaderboard, isLoading } = usePotionContract();
+
+  useEffect(() => {
+    fetchLeaderboard().then((results) => {
+      console.log("fetch done");
+      if (!results) return;
+      const newEntries = results
+        .sort((a, b) => a.guess - b.guess)
+        .map((result, i) => ({
+          address: result.player,
+          score: result.guess,
+          rank: i + 1,
+        }));
+      setEntries(newEntries);
+    });
+  }, [fetchLeaderboard]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -18,7 +39,7 @@ export const Landing = () => {
                 Encrypted Potion Leaderboard
               </h1>
             </div>
-            <WalletConnect />
+            <WalletButton />
           </div>
         </div>
       </header>
@@ -35,12 +56,16 @@ export const Landing = () => {
               Master the Art of Alchemy
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Combine mystical potions to create powerful elixirs. Your brewing skills determine your score in this 
-              enchanted competition powered by encrypted blockchain technology.
+              Combine mystical potions to create powerful elixirs. Your brewing
+              skills determine your score in this enchanted competition powered
+              by encrypted blockchain technology.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link to="/game">
-                <Button size="lg" className="magical-button text-lg px-8 py-6 gap-3">
+                <Button
+                  size="lg"
+                  className="magical-button text-lg px-8 py-6 gap-3"
+                >
                   <Target className="h-6 w-6" />
                   Start Brewing
                 </Button>
@@ -61,7 +86,8 @@ export const Landing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Select from 8 unique magical potions, each with different rarities and hidden values.
+                  Select from 8 unique magical potions, each with different
+                  rarities and hidden values.
                 </p>
               </CardContent>
             </Card>
@@ -73,7 +99,8 @@ export const Landing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Your combinations are encrypted before scoring, ensuring fair and tamper-proof results.
+                  Your combinations are encrypted before scoring, ensuring fair
+                  and tamper-proof results.
                 </p>
               </CardContent>
             </Card>
@@ -85,7 +112,8 @@ export const Landing = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Climb the leaderboard and prove you're the ultimate potion master in the realm.
+                  Climb the leaderboard and prove you're the ultimate potion
+                  master in the realm.
                 </p>
               </CardContent>
             </Card>
@@ -93,7 +121,7 @@ export const Landing = () => {
 
           {/* Leaderboard Section */}
           <div className="max-w-2xl mx-auto">
-            <Leaderboard title="🏆 Top Alchemists" />
+            <Leaderboard entries={entries} isLoading={isLoading} />
           </div>
         </div>
       </main>
@@ -102,7 +130,8 @@ export const Landing = () => {
       <footer className="border-t border-border/50 bg-card/30 py-8 mt-20">
         <div className="container mx-auto px-4 text-center">
           <p className="text-muted-foreground">
-            Built with 🧪 for the future of gaming • Powered by encrypted blockchain technology
+            Built with 🧪 for the future of gaming • Powered by encrypted
+            blockchain technology
           </p>
         </div>
       </footer>

@@ -73,7 +73,7 @@ export const Leaderboard = ({ entries, isLoading }: LeaderboardProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {entries.length > 0 &&
+          {entries?.length > 0 &&
             entries.map((entry) => (
               <div
                 key={entry.address}

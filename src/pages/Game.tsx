@@ -4,7 +4,7 @@ import { useAccount } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { WalletConnect } from "@/components/WalletConnect";
+import { WalletButton } from "@/components/WalletConnect";
 import { Leaderboard } from "@/components/Leaderboard";
 import { PotionGrid } from "@/components/PotionGrid";
 import { type UserStats, LeaderboardEntry } from "@/lib/contract";
@@ -164,7 +164,7 @@ export const Game = () => {
                 </h1>
               </div>
             </div>
-            <WalletConnect />
+            <WalletButton />
           </div>
         </div>
       </header>
