@@ -24,7 +24,6 @@ pragma solidity ^0.8.20;
 
 import {FHE, externalEuint8, euint8, euint16, ebool, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
 import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
-import "hardhat/console.sol";
 
 contract Potion is SepoliaConfig {
     /// @notice Tracks the highest encrypted score of each player
