@@ -13,9 +13,11 @@ export const Landing = () => {
   const { fetchLeaderboard, isLoading } = usePotionContract();
 
   useEffect(() => {
+    let isMounted = true;
+    
     fetchLeaderboard().then((results) => {
-      console.log("fetch done");
-      if (!results) return;
+      if (!isMounted || !results) return;
+      
       const newEntries = results
         .sort((a, b) => b.guess - a.guess)
         .map((result, i) => ({
@@ -24,8 +26,14 @@ export const Landing = () => {
           rank: i + 1,
         }));
       setEntries(newEntries);
+    }).catch(() => {
+      // Silently fail on landing page - leaderboard will show empty state
     });
-  }, [fetchLeaderboard]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

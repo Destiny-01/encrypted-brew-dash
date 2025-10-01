@@ -34,9 +34,12 @@ export const Game = () => {
 
   const MAX_SELECTION = 5;
 
+  /**
+   * Fetch and update leaderboard data
+   * Updates both global leaderboard and user-specific stats
+   */
   const retrieveLB = useCallback(() => {
     fetchLeaderboard().then((results) => {
-      console.log("fetch done");
       if (!results) return;
       const newEntries = results
         .sort((a, b) => b.guess - a.guess)
@@ -49,20 +52,28 @@ export const Game = () => {
       const user = newEntries.find(
         (entry) => entry.address?.toLowerCase() === address?.toLowerCase()
       );
-      setUserStats({
-        address,
-        highestScore: user.score,
-        currentRank: user.rank,
-      });
+      if (user) {
+        setUserStats({
+          address: address!,
+          highestScore: user.score,
+          currentRank: user.rank,
+        });
+      }
     });
-  }, [address]);
+  }, [address, fetchLeaderboard]);
 
   useEffect(() => {
-    fetchLeaderboard();
     initializeFHE()
       .then(() => retrieveLB())
-      .catch(console.error);
-  }, [retrieveLB]);
+      .catch((error) => {
+        toast({
+          title: "Initialization Error",
+          description:
+            "Failed to initialize encryption system. Please refresh the page.",
+          variant: "destructive",
+        });
+      });
+  }, [retrieveLB, toast]);
 
   // Fetch user stats when connected
   useEffect(() => {
@@ -102,25 +113,27 @@ export const Game = () => {
     setIsNewHighScore(false);
 
     try {
-      const result = Number(await submitPotion(selectedPotions));
+      const { decrypted: result } = await submitPotion(selectedPotions);
+      const isHighest =
+        userStats?.highestScore && Number(result) > userStats.highestScore;
 
-      console.log({ result });
       if (result) {
-        const previousHighScore = userStats?.highestScore || 0;
-        const isHighScore = result > previousHighScore;
+        setLastScore(Number(result));
+        setIsNewHighScore(isHighest);
 
-        setLastScore(result);
-        setIsNewHighScore(isHighScore);
-
-        if (isHighScore) {
+        if (isHighest) {
           toast({
             title: "🎉 NEW HIGH SCORE! 🎉",
-            description: `Legendary brew! You scored ${result.toLocaleString()} points!`,
+            description: `Legendary brew! You scored ${Number(
+              result
+            ).toLocaleString()} points!`,
           });
         } else {
           toast({
-            title: "Potion Brewed",
-            description: `You scored ${result.toLocaleString()} points. Keep experimenting to beat your high score!`,
+            title: "Potion Brewed Successfully",
+            description: `You scored ${Number(
+              result
+            ).toLocaleString()} points. Keep experimenting to beat your high score!`,
           });
         }
 
@@ -133,10 +146,13 @@ export const Game = () => {
         setSelectedPotions([]);
       }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Transaction failed";
       toast({
         title: "Brewing Failed",
-        description:
-          error instanceof Error ? error.message : "Something went wrong",
+        description: errorMessage.includes("rejected")
+          ? "Transaction was rejected. Please try again."
+          : "Failed to brew potion. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {

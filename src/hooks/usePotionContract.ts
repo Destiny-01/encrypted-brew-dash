@@ -60,7 +60,7 @@ export function usePotionContract() {
       console.error("Error fetching leaderboard:", err);
       toast({
         title: "Failed to load leaderboard",
-        description: err.message || "Could not fetch leaderboard data.",
+        description: "Unable to fetch leaderboard data. Please refresh the page.",
         variant: "destructive",
       });
       return [];
@@ -93,8 +93,20 @@ export function usePotionContract() {
 
       toast({
         title: "⚡ Encrypting potion...",
-        description: "Securing your brew with FHE.",
+        description: "Securing your brew with FHE encryption.",
       });
+
+      // Ensure handles and proof are properly formatted as hex strings
+      const formatHandle = (handle: any): `0x${string}` => {
+        if (typeof handle === 'string') {
+          return handle.startsWith('0x') ? handle as `0x${string}` : `0x${handle}`;
+        }
+        // Convert Uint8Array or Buffer to hex
+        const hexString = Array.from(new Uint8Array(handle))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        return `0x${hexString}`;
+      };
 
       // Use wagmi's writeContract through walletClient
       const hash = await walletClient.writeContract({
@@ -102,19 +114,19 @@ export function usePotionContract() {
         abi: contractConfig.abi,
         functionName: "compute",
         args: [
-          encryptedVault.handles[0],
-          encryptedVault.handles[1],
-          encryptedVault.handles[2],
-          encryptedVault.handles[3],
-          encryptedVault.handles[4],
-          encryptedVault.inputProof,
-        ] as any,
+          formatHandle(encryptedVault.handles[0]),
+          formatHandle(encryptedVault.handles[1]),
+          formatHandle(encryptedVault.handles[2]),
+          formatHandle(encryptedVault.handles[3]),
+          formatHandle(encryptedVault.handles[4]),
+          formatHandle(encryptedVault.inputProof),
+        ],
         account: address,
       } as any);
 
       toast({
-        title: "📡 Transaction submitted...",
-        description: "Waiting for confirmation.",
+        title: "📡 Transaction submitted",
+        description: "Waiting for blockchain confirmation...",
       });
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -161,9 +173,12 @@ export function usePotionContract() {
       return { decrypted, isHighest };
     } catch (err: any) {
       console.error("Error submitting potion:", err);
+      const errorMsg = err.message || "";
       toast({
         title: "❌ Failed to submit potion",
-        description: err.message || "Transaction failed or was rejected.",
+        description: errorMsg.includes("rejected") || errorMsg.includes("denied")
+          ? "Transaction was rejected by user."
+          : "Transaction failed. Please try again.",
         variant: "destructive",
       });
       throw err;

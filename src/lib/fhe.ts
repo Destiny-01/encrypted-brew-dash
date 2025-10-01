@@ -10,23 +10,19 @@ import { initSDK } from "@zama-fhe/relayer-sdk/bundle";
 
 let relayer: FhevmInstance | null = null;
 
+/**
+ * Initialize the FHE relayer SDK
+ * Must be called before any encryption/decryption operations
+ */
 export async function initializeFHE() {
   try {
     if (!relayer) {
-      console.log("Checking available global objects...");
-
-      console.log("Calling initSDK()...");
       await initSDK();
-      console.log("initSDK() completed");
-
       relayer = await createInstance(SepoliaConfig);
-
-      console.log("FHEVM relayer SDK instance initialized successfully");
     }
     return relayer;
   } catch (error) {
     console.error("Failed to initialize FHEVM relayer SDK:", error);
-    console.error("Error details:", error);
     throw new Error("Failed to initialize FHE encryption");
   }
 }
@@ -39,9 +35,11 @@ export async function getFhevmInstance() {
 }
 
 /**
- * Encrypt a 4-digit vault code
- * - plainDigits: [0..9] length 4
- * - returns ciphertext string (store onchain in your contract)
+ * Encrypt potion values using FHE
+ * @param contractAddress - The smart contract address
+ * @param address - User's wallet address
+ * @param plainDigits - Array of numbers to encrypt (potion IDs)
+ * @returns Encrypted ciphertext blob with handles and proof
  */
 export async function encryptValue(
   contractAddress: string,
@@ -50,21 +48,22 @@ export async function encryptValue(
 ) {
   if (!relayer) throw new Error("Relayer not initialized");
 
-  //   console.log("syat", contractAddress);
   const inputHandle = relayer.createEncryptedInput(contractAddress, address);
   for (const d of plainDigits) {
-    inputHandle.add8(d); // add8 is an SDK helper in examples
+    inputHandle.add8(d);
   }
-  // seal & encrypt
+  
   const ciphertextBlob = await inputHandle.encrypt();
-  console.log(ciphertextBlob, ciphertextBlob.handles[0]);
   return ciphertextBlob;
 }
 
 /**
- * Request user decryption via relayer:
- * - if result was returned re-encrypted for user, relayer will deliver ciphertext and user decrypts locally
- * - depending on SDK, relayer may return plaintext directly after EIP-712 auth
+ * Request user decryption of encrypted result
+ * Uses EIP-712 signature for authentication
+ * @param contractAddress - The smart contract address
+ * @param signer - Ethers signer for EIP-712 signature
+ * @param ciphertextHandle - The encrypted value handle from contract
+ * @returns Decrypted value
  */
 export async function requestUserDecryption(
   contractAddress: string,
@@ -117,7 +116,9 @@ export async function requestUserDecryption(
 }
 
 /**
- * Fetch a public decryption (if outputs are public)
+ * Fetch public decryption for leaderboard scores
+ * @param handles - Array of encrypted value handles
+ * @returns Mapping of handles to decrypted values
  */
 export async function fetchPublicDecryption(handles: string[]): Promise<any> {
   if (!relayer) throw new Error("Relayer not initialized");
