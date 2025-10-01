@@ -96,19 +96,31 @@ export function usePotionContract() {
         description: "Securing your brew with FHE encryption.",
       });
 
+      // Ensure handles and proof are properly formatted as hex strings
+      const formatHandle = (handle: any): `0x${string}` => {
+        if (typeof handle === 'string') {
+          return handle.startsWith('0x') ? handle as `0x${string}` : `0x${handle}`;
+        }
+        // Convert Uint8Array or Buffer to hex
+        const hexString = Array.from(new Uint8Array(handle))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        return `0x${hexString}`;
+      };
+
       // Use wagmi's writeContract through walletClient
       const hash = await walletClient.writeContract({
         address: contractConfig.address,
         abi: contractConfig.abi,
         functionName: "compute",
         args: [
-          encryptedVault.handles[0],
-          encryptedVault.handles[1],
-          encryptedVault.handles[2],
-          encryptedVault.handles[3],
-          encryptedVault.handles[4],
-          encryptedVault.inputProof,
-        ] as any,
+          formatHandle(encryptedVault.handles[0]),
+          formatHandle(encryptedVault.handles[1]),
+          formatHandle(encryptedVault.handles[2]),
+          formatHandle(encryptedVault.handles[3]),
+          formatHandle(encryptedVault.handles[4]),
+          formatHandle(encryptedVault.inputProof),
+        ],
         account: address,
       } as any);
 
