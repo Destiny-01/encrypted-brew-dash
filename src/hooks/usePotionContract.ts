@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useToast } from "./use-toast";
-import { Contract, ethers } from "ethers";
+import { ethers } from "ethers";
+import { decodeEventLog } from "viem";
 import contractData from "@/config/Potion.json";
 import {
   encryptValue,
   requestUserDecryption,
   fetchPublicDecryption,
 } from "@/lib/fhe";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, useWalletClient, usePublicClient } from "wagmi";
 
 interface ContractType {
   address: string;
@@ -17,51 +18,37 @@ interface ContractType {
 const contract: ContractType = contractData as any;
 
 export const contractConfig = {
-  address: contract.address,
+  address: contract.address as `0x${string}`,
   abi: contract.abi,
 };
 
 export function usePotionContract() {
   const { address } = useAccount();
   const { toast } = useToast();
-
-  // wagmi gives you both read & write clients
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Contract instance for reads (ethers wrapper around wagmi's RPC)
-  const readContract = useMemo(() => {
-    if (!publicClient) return null;
-    const rpc = new ethers.JsonRpcProvider(publicClient.transport.url);
-    return new ethers.Contract(contractConfig.address, contractConfig.abi, rpc);
-  }, [publicClient]);
-
-  // Helper: contract with signer for writes
-  const getSignerContract = async () => {
-    if (!walletClient) throw new Error("Wallet not connected");
-    const provider = new ethers.BrowserProvider(walletClient.transport as any);
-    const signer = await provider.getSigner();
-    const contract = new ethers.Contract(
-      contractConfig.address,
-      contractConfig.abi,
-      signer
-    );
-
-    return { contract, signer };
-  };
-
   // ---------------------------
   // Reads
   // ---------------------------
-  const fetchLeaderboard = async () => {
-    if (!readContract) return [];
+  const fetchLeaderboard = useCallback(async () => {
+    if (!publicClient) return [];
+    
     try {
       setIsLoading(true);
 
-      const playersAndGuesses = await readContract.getAllHighestGuesses();
-      const [players, guesses] = playersAndGuesses as [string[], string[]];
+      const result = await publicClient.readContract({
+        address: contractConfig.address,
+        abi: contractConfig.abi,
+        functionName: "getAllHighestGuesses",
+        args: [],
+      } as any);
+
+      const [players, guesses] = result as [string[], string[]];
+
+      if (guesses.length === 0) return [];
 
       // decrypt via your FHE helpers
       const decryptedMap = await fetchPublicDecryption(guesses);
@@ -70,30 +57,31 @@ export function usePotionContract() {
         guess: Number(decryptedMap[guesses[idx]]),
       }));
     } catch (err: any) {
-      console.error("Error fetching room:", err);
+      console.error("Error fetching leaderboard:", err);
       toast({
-        title: "Failed to load room",
-        description: "Could not fetch room data from contract.",
+        title: "Failed to load leaderboard",
+        description: err.message || "Could not fetch leaderboard data.",
         variant: "destructive",
       });
       return [];
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [publicClient, toast]);
 
   // ---------------------------
   // Writes
   // ---------------------------
-  const submitPotion = async (vaultCode: number[]) => {
-    if (!address) {
+  const submitPotion = useCallback(async (vaultCode: number[]) => {
+    if (!address || !walletClient || !publicClient) {
       toast({
         title: "Wallet not connected",
-        description: "Please connect your wallet to create a room.",
+        description: "Please connect your wallet to submit.",
         variant: "destructive",
       });
       throw new Error("Wallet not connected");
     }
+    
     try {
       setIsLoading(true);
 
@@ -104,33 +92,48 @@ export function usePotionContract() {
       );
 
       toast({
-        title: "⚡ Encrypting vault...",
-        description: "Securing your code with FHE.",
+        title: "⚡ Encrypting potion...",
+        description: "Securing your brew with FHE.",
       });
 
-      const { contract: contractWithSigner, signer } =
-        await getSignerContract();
-      const tx = await contractWithSigner.compute(
-        ...encryptedVault.handles,
-        encryptedVault.inputProof
-      );
+      // Use wagmi's writeContract through walletClient
+      const hash = await walletClient.writeContract({
+        address: contractConfig.address,
+        abi: contractConfig.abi,
+        functionName: "compute",
+        args: [
+          encryptedVault.handles[0],
+          encryptedVault.handles[1],
+          encryptedVault.handles[2],
+          encryptedVault.handles[3],
+          encryptedVault.handles[4],
+          encryptedVault.inputProof,
+        ] as any,
+        account: address,
+      } as any);
 
       toast({
         title: "📡 Transaction submitted...",
         description: "Waiting for confirmation.",
       });
-      const receipt = await tx.wait();
 
-      // Extract ComputeResult from logs
-      const iface = new ethers.Interface(contractConfig.abi as any);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+      // Extract ComputeResult from logs using viem
       let value: string | null = null;
       let isHighest: boolean | null = null;
+      
       for (const log of receipt.logs ?? []) {
         try {
-          const parsed = iface.parseLog({ topics: log.topics, data: log.data });
-          if (parsed?.name === "ComputeResult") {
-            value = parsed.args?.[0];
-            isHighest = parsed.args?.[1];
+          const decoded: any = decodeEventLog({
+            abi: contractConfig.abi,
+            data: log.data,
+            topics: (log as any).topics,
+          });
+          
+          if (decoded.eventName === "ComputeResult") {
+            value = decoded.args.value;
+            isHighest = decoded.args.isHighest;
             break;
           }
         } catch {
@@ -144,6 +147,11 @@ export function usePotionContract() {
         title: "📡 Transaction successful",
         description: "Decrypting output...",
       });
+
+      // Create signer for decryption
+      const provider = new ethers.BrowserProvider(walletClient.transport as any);
+      const signer = await provider.getSigner();
+
       const decrypted = await requestUserDecryption(
         contractConfig.address,
         signer,
@@ -152,9 +160,9 @@ export function usePotionContract() {
 
       return { decrypted, isHighest };
     } catch (err: any) {
-      console.error("Error creating room:", err);
+      console.error("Error submitting potion:", err);
       toast({
-        title: "❌ Failed to create room",
+        title: "❌ Failed to submit potion",
         description: err.message || "Transaction failed or was rejected.",
         variant: "destructive",
       });
@@ -162,7 +170,7 @@ export function usePotionContract() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [address, walletClient, publicClient, toast]);
 
   return {
     isLoading,
