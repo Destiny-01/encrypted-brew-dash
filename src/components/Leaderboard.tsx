@@ -1,33 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Crown, Trophy, Medal, Loader2 } from 'lucide-react';
-import { getLeaderboard, type LeaderboardEntry } from '@/lib/contract';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Crown, Trophy, Medal, Loader2 } from "lucide-react";
+import { type LeaderboardEntry } from "@/lib/contract";
 
 interface LeaderboardProps {
-  title?: string;
-  showTop?: number;
+  entries: LeaderboardEntry[];
+  isLoading: boolean;
 }
 
-export const Leaderboard = ({ title = "Leaderboard", showTop = 5 }: LeaderboardProps) => {
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const data = await getLeaderboard();
-        setEntries(data.slice(0, showTop));
-      } catch (error) {
-        console.error('Failed to fetch leaderboard:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLeaderboard();
-  }, [showTop]);
+export const Leaderboard = ({ entries, isLoading }: LeaderboardProps) => {
+  const title = "Top Brewers";
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -38,7 +22,11 @@ export const Leaderboard = ({ title = "Leaderboard", showTop = 5 }: LeaderboardP
       case 3:
         return <Medal className="h-5 w-5 text-amber-600" />;
       default:
-        return <span className="text-lg font-bold text-muted-foreground">#{rank}</span>;
+        return (
+          <span className="text-lg font-bold text-muted-foreground">
+            #{rank}
+          </span>
+        );
     }
   };
 
@@ -51,7 +39,10 @@ export const Leaderboard = ({ title = "Leaderboard", showTop = 5 }: LeaderboardP
         <CardContent>
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+              >
                 <div className="flex items-center gap-3 flex-1">
                   <Skeleton className="h-8 w-8 rounded-full" />
                   <div className="flex-1">
@@ -82,35 +73,32 @@ export const Leaderboard = ({ title = "Leaderboard", showTop = 5 }: LeaderboardP
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {entries.map((entry) => (
-            <div
-              key={entry.address}
-              className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 transition-all duration-200"
-            >
-              <div className="flex items-center gap-3">
-                {getRankIcon(entry.rank)}
-                <div>
-                  <div className="font-semibold text-foreground">
-                    {entry.username}
-                  </div>
-                  <div className="text-xs text-muted-foreground font-mono">
-                    {entry.address.slice(0, 8)}...{entry.address.slice(-6)}
+          {entries.length > 0 &&
+            entries.map((entry) => (
+              <div
+                key={entry.address}
+                className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50 hover:bg-secondary/50 transition-all duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  {getRankIcon(entry.rank)}
+                  <div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {entry.address.slice(0, 8)}...{entry.address.slice(-6)}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <Badge 
-                  variant="secondary" 
-                  className={`${entry.rank <= 3 ? 'rank-gold' : 'text-accent'} font-bold text-lg`}
-                >
-                  {entry.score.toLocaleString()}
-                </Badge>
-                <div className="text-xs text-muted-foreground mt-1">
-                  {entry.lastUpdated.toLocaleDateString()}
+                <div className="text-right">
+                  <Badge
+                    variant="secondary"
+                    className={`${
+                      entry.rank <= 3 ? "rank-gold" : "text-accent"
+                    } font-bold text-lg`}
+                  >
+                    {entry.score.toLocaleString()}
+                  </Badge>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </CardContent>
     </Card>

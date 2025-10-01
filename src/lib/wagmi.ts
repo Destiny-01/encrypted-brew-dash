@@ -1,24 +1,11 @@
-import { createConfig, http } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
-import { walletConnect } from 'wagmi/connectors';
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { sepolia } from "wagmi/chains";
 
-const projectId = 'your-project-id'; // TODO: Replace with actual WalletConnect project ID
+const projectId = "your-project-id";
 
-export const config = createConfig({
-  chains: [mainnet, sepolia],
-  connectors: [
-    walletConnect({
-      projectId,
-      metadata: {
-        name: 'Encrypted Potion Leaderboard',
-        description: 'A gamified dApp for potion brewing with encrypted scoring',
-        url: 'https://encrypted-potions.app',
-        icons: ['https://avatars.githubusercontent.com/u/37784886'],
-      },
-    }),
-  ],
-  transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-  },
+export const config = getDefaultConfig({
+  appName: "Potion Brew",
+  projectId,
+  chains: [sepolia],
+  ssr: false,
 });

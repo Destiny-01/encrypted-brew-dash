@@ -1,46 +1,80 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAccount } from 'wagmi';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { WalletConnect } from '@/components/WalletConnect';
-import { Leaderboard } from '@/components/Leaderboard';
-import { PotionGrid } from '@/components/PotionGrid';
-import { submitPotion, getUserStats, type UserStats } from '@/lib/contract';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Beaker, 
-  ArrowLeft, 
-  Sparkles, 
-  Trophy, 
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import { useAccount } from "wagmi";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { WalletConnect } from "@/components/WalletConnect";
+import { Leaderboard } from "@/components/Leaderboard";
+import { PotionGrid } from "@/components/PotionGrid";
+import { type UserStats, LeaderboardEntry } from "@/lib/contract";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Beaker,
+  ArrowLeft,
+  Sparkles,
+  Trophy,
   TrendingUp,
-  Loader2
-} from 'lucide-react';
+  Loader2,
+} from "lucide-react";
+import { usePotionContract } from "@/hooks/usePotionContract";
+import { initializeFHE } from "@/lib/fhe";
 
 export const Game = () => {
   const { address, isConnected } = useAccount();
   const { toast } = useToast();
-  
+  const { isLoading, submitPotion, fetchLeaderboard } = usePotionContract();
+
   const [selectedPotions, setSelectedPotions] = useState<number[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [lastScore, setLastScore] = useState<number | null>(null);
   const [isNewHighScore, setIsNewHighScore] = useState(false);
-  
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+
   const MAX_SELECTION = 5;
+
+  const retrieveLB = useCallback(() => {
+    fetchLeaderboard().then((results) => {
+      console.log("fetch done");
+      if (!results) return;
+      const newEntries = results
+        .sort((a, b) => a.guess - b.guess)
+        .map((result, i) => ({
+          address: result.player,
+          score: result.guess,
+          rank: i + 1,
+        }));
+      setEntries(newEntries);
+      const user = newEntries.find(
+        (entry) => entry.address.toLowerCase() === address.toLowerCase()
+      );
+      setUserStats({
+        address,
+        highestScore: user.score,
+        currentRank: user.rank,
+      });
+    });
+  }, [address]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+    initializeFHE()
+      .then(() => retrieveLB())
+      .catch(console.error);
+  }, [retrieveLB]);
 
   // Fetch user stats when connected
   useEffect(() => {
     if (address && isConnected) {
-      getUserStats(address).then(setUserStats);
+      retrieveLB();
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, retrieveLB]);
 
   const handlePotionSelect = (potionId: number) => {
-    setSelectedPotions(prev => {
+    setSelectedPotions((prev) => {
       if (prev.includes(potionId)) {
-        return prev.filter(id => id !== potionId);
+        return prev.filter((id) => id !== potionId);
       } else if (prev.length < MAX_SELECTION) {
         return [...prev, potionId];
       } else {
@@ -66,44 +100,43 @@ export const Game = () => {
 
     setIsSubmitting(true);
     setIsNewHighScore(false);
-    
+
     try {
-      const result = await submitPotion(selectedPotions, address);
-      
-      if (result.success && result.score !== undefined) {
+      const result = Number(await submitPotion(selectedPotions));
+
+      console.log({ result });
+      if (result) {
         const previousHighScore = userStats?.highestScore || 0;
-        const isHighScore = result.score > previousHighScore;
-        
-        setLastScore(result.score);
+        const isHighScore = result > previousHighScore;
+
+        setLastScore(result);
         setIsNewHighScore(isHighScore);
-        
+
         if (isHighScore) {
           toast({
             title: "🎉 NEW HIGH SCORE! 🎉",
-            description: `Legendary brew! You scored ${result.score.toLocaleString()} points!`,
+            description: `Legendary brew! You scored ${result.toLocaleString()} points!`,
           });
         } else {
           toast({
             title: "Potion Brewed",
-            description: `You scored ${result.score.toLocaleString()} points. Keep experimenting to beat your high score!`,
+            description: `You scored ${result.toLocaleString()} points. Keep experimenting to beat your high score!`,
           });
         }
-        
+
         // Update user stats if connected
         if (address && isConnected) {
-          const updatedStats = await getUserStats(address);
-          setUserStats(updatedStats);
+          retrieveLB();
         }
-        
+
         // Clear selection
         setSelectedPotions([]);
-      } else {
-        throw new Error(result.error || 'Failed to brew potion');
       }
     } catch (error) {
       toast({
         title: "Brewing Failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description:
+          error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
     } finally {
@@ -147,10 +180,15 @@ export const Game = () => {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-muted-foreground">Connected Alchemist:</p>
+                        <p className="text-sm text-muted-foreground">
+                          Connected Alchemist:
+                        </p>
                         <p className="font-mono text-foreground">{address}</p>
                       </div>
-                      <Badge variant="secondary" className="bg-magic-purple/20 text-magic-purple">
+                      <Badge
+                        variant="secondary"
+                        className="bg-magic-purple/20 text-magic-purple"
+                      >
                         ⚡ Connected
                       </Badge>
                     </div>
@@ -169,7 +207,9 @@ export const Game = () => {
                     </Badge>
                   </CardTitle>
                   <p className="text-muted-foreground">
-                    Select up to {MAX_SELECTION} potions to combine into a powerful elixir. Each unique combination yields different scores!
+                    Select up to {MAX_SELECTION} potions to combine into a
+                    powerful elixir. Each unique combination yields different
+                    scores!
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -178,7 +218,7 @@ export const Game = () => {
                     onPotionSelect={handlePotionSelect}
                     disabled={isSubmitting}
                   />
-                  
+
                   <div className="mt-6 flex flex-col items-center gap-4">
                     <Button
                       onClick={handleBrewPotion}
@@ -198,7 +238,7 @@ export const Game = () => {
                         </>
                       )}
                     </Button>
-                    
+
                     {isSubmitting && (
                       <p className="text-sm text-muted-foreground animate-pulse">
                         🔮 Mixing magical ingredients...
@@ -210,21 +250,37 @@ export const Game = () => {
 
               {/* Last Score Display */}
               {lastScore !== null && (
-                <Card className={`potion-card ${isNewHighScore ? 'animate-glow border-magic-gold' : ''}`}>
+                <Card
+                  className={`potion-card ${
+                    isNewHighScore ? "animate-glow border-magic-gold" : ""
+                  }`}
+                >
                   <CardContent className="p-6 text-center">
                     <div className="mb-2">
-                      <Trophy className={`h-8 w-8 mx-auto ${isNewHighScore ? 'text-magic-gold' : 'text-muted-foreground'}`} />
+                      <Trophy
+                        className={`h-8 w-8 mx-auto ${
+                          isNewHighScore
+                            ? "text-magic-gold"
+                            : "text-muted-foreground"
+                        }`}
+                      />
                     </div>
-                    <h3 className={`text-2xl font-bold mb-1 ${isNewHighScore ? 'text-magic-gold' : 'text-foreground'}`}>
-                      {isNewHighScore ? '🎉 NEW HIGH SCORE! 🎉' : 'Latest Score'}
+                    <h3
+                      className={`text-2xl font-bold mb-1 ${
+                        isNewHighScore ? "text-magic-gold" : "text-foreground"
+                      }`}
+                    >
+                      {isNewHighScore
+                        ? "🎉 NEW HIGH SCORE! 🎉"
+                        : "Latest Score"}
                     </h3>
                     <p className="text-3xl font-bold text-magic-purple mb-2">
                       {lastScore.toLocaleString()}
                     </p>
                     <p className="text-muted-foreground">
-                      {isNewHighScore 
-                        ? 'Legendary brew! You\'ve surpassed your previous best!' 
-                        : 'Keep experimenting with different combinations!'}
+                      {isNewHighScore
+                        ? "Legendary brew! You've surpassed your previous best!"
+                        : "Keep experimenting with different combinations!"}
                     </p>
                   </CardContent>
                 </Card>
@@ -244,27 +300,28 @@ export const Game = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Highest Score:</span>
-                      <Badge variant="secondary" className="text-magic-gold font-bold">
+                      <span className="text-muted-foreground">
+                        Highest Score:
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="text-magic-gold font-bold"
+                      >
                         {userStats.highestScore.toLocaleString()}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Current Rank:</span>
-                      <Badge variant="outline">
-                        #{userStats.currentRank}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Games Played:</span>
-                      <span className="font-semibold">{userStats.totalGames}</span>
+                      <span className="text-muted-foreground">
+                        Current Rank:
+                      </span>
+                      <Badge variant="outline">#{userStats.currentRank}</Badge>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
               {/* Leaderboard */}
-              <Leaderboard title="🏆 Top Brewers" showTop={10} />
+              <Leaderboard entries={entries} isLoading={isLoading} />
             </div>
           </div>
         </div>
