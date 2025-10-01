@@ -74,10 +74,7 @@ function ConnectedWalletDisplay({ account }: { account: any }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="cyber-border bg-background hover:bg-primary/10 flex items-center gap-2"
-        >
+        <Button className="magical-button px-8 py-6 gap-2">
           <div className="flex flex-col items-start text-left">
             <div className="text-sm font-mono">
               {formatAddress(account.address)}

@@ -39,7 +39,7 @@ export const Game = () => {
       console.log("fetch done");
       if (!results) return;
       const newEntries = results
-        .sort((a, b) => a.guess - b.guess)
+        .sort((a, b) => b.guess - a.guess)
         .map((result, i) => ({
           address: result.player,
           score: result.guess,
@@ -47,7 +47,7 @@ export const Game = () => {
         }));
       setEntries(newEntries);
       const user = newEntries.find(
-        (entry) => entry.address.toLowerCase() === address.toLowerCase()
+        (entry) => entry.address?.toLowerCase() === address?.toLowerCase()
       );
       setUserStats({
         address,

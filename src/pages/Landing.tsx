@@ -17,7 +17,7 @@ export const Landing = () => {
       console.log("fetch done");
       if (!results) return;
       const newEntries = results
-        .sort((a, b) => a.guess - b.guess)
+        .sort((a, b) => b.guess - a.guess)
         .map((result, i) => ({
           address: result.player,
           score: result.guess,
