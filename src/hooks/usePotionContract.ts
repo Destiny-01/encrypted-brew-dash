@@ -60,7 +60,7 @@ export function usePotionContract() {
       console.error("Error fetching leaderboard:", err);
       toast({
         title: "Failed to load leaderboard",
-        description: err.message || "Could not fetch leaderboard data.",
+        description: "Unable to fetch leaderboard data. Please refresh the page.",
         variant: "destructive",
       });
       return [];
@@ -93,7 +93,7 @@ export function usePotionContract() {
 
       toast({
         title: "⚡ Encrypting potion...",
-        description: "Securing your brew with FHE.",
+        description: "Securing your brew with FHE encryption.",
       });
 
       // Use wagmi's writeContract through walletClient
@@ -113,8 +113,8 @@ export function usePotionContract() {
       } as any);
 
       toast({
-        title: "📡 Transaction submitted...",
-        description: "Waiting for confirmation.",
+        title: "📡 Transaction submitted",
+        description: "Waiting for blockchain confirmation...",
       });
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -161,9 +161,12 @@ export function usePotionContract() {
       return { decrypted, isHighest };
     } catch (err: any) {
       console.error("Error submitting potion:", err);
+      const errorMsg = err.message || "";
       toast({
         title: "❌ Failed to submit potion",
-        description: err.message || "Transaction failed or was rejected.",
+        description: errorMsg.includes("rejected") || errorMsg.includes("denied")
+          ? "Transaction was rejected by user."
+          : "Transaction failed. Please try again.",
         variant: "destructive",
       });
       throw err;
