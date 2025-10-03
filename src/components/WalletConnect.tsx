@@ -61,21 +61,7 @@ export function WalletButton() {
   );
 }
 
-/**
- * TODO: Step 1 - Display Connected Wallet Information
- * This component shows:
- * 1. User's wallet address (formatted)
- * 2. ETH balance from useBalance hook
- * 3. Dropdown menu with:
- *    - Link to Etherscan
- *    - Disconnect button
- */
 function ConnectedWalletDisplay({ account }: { account: any }) {
-  // TODO: Use useAccount() to get wallet address
-  // TODO: Use useBalance() to fetch ETH balance
-  // TODO: Format address as "0x1234...5678"
-  // TODO: Format balance as "0.123 ETH"
-  
   const { address } = useAccount();
   const { data: balance } = useBalance({ address });
 
@@ -126,15 +112,4 @@ function ConnectedWalletDisplay({ account }: { account: any }) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-  
-  /* ORIGINAL CODE FOR DOCUMENTATION:
-  const { address } = useAccount();
-  const { data: balance } = useBalance({ address });
-
-  const formatAddress = (addr: string) =>
-    `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-
-  const formatBalance = (bal: any) =>
-    bal ? `${parseFloat(bal.formatted).toFixed(3)} ${bal.symbol}` : "0.000 ETH";
-  */
 }

@@ -33,28 +33,9 @@ export function usePotionContract() {
   // ---------------------------
   // Reads
   // ---------------------------
-  /**
-   * TODO: Step 2 - Implement Contract Reading
-   * 1. Use publicClient.readContract() to call getAllHighestGuesses()
-   * 2. Extract players and their encrypted guess handles
-   * 3. Use fetchPublicDecryption() to decrypt all handles at once
-   * 4. Map the results to player addresses and scores
-   * 5. Return the leaderboard array
-   */
   const fetchLeaderboard = useCallback(async () => {
     if (!publicClient) return [];
     
-    // TODO: Implement leaderboard fetching
-    // Hint: Use publicClient.readContract() and fetchPublicDecryption()
-    
-    // Mock data for development (remove when implementing)
-    return [
-      { player: "0x1234567890123456789012345678901234567890", guess: 150 },
-      { player: "0xabcdef0123456789abcdef0123456789abcdef01", guess: 120 },
-      { player: "0x9876543210987654321098765432109876543210", guess: 90 },
-    ];
-    
-    /* ORIGINAL CODE FOR DOCUMENTATION:
     try {
       setIsLoading(true);
 
@@ -86,40 +67,11 @@ export function usePotionContract() {
     } finally {
       setIsLoading(false);
     }
-    */
   }, [publicClient, toast]);
 
   // ---------------------------
   // Writes
   // ---------------------------
-  /**
-   * TODO: Step 3 & 4 - Implement Transaction Submission with FHE
-   * This combines multiple concepts:
-   * 
-   * 1. CLIENT-SIDE ENCRYPTION (Step 4):
-   *    - Use encryptValue() to encrypt the potion IDs
-   *    - Pad the vault code to exactly 5 values (contract requirement)
-   *    - Get encrypted handles and proof
-   * 
-   * 2. TRANSACTION SUBMISSION (Step 3):
-   *    - Use walletClient.writeContract() to call the compute() function
-   *    - Pass the encrypted handles and proof as function arguments
-   *    - Wait for transaction confirmation with waitForTransactionReceipt()
-   * 
-   * 3. EVENT PARSING (Step 3):
-   *    - Decode the ComputeResult event from transaction logs
-   *    - Extract the encrypted result handle and isHighest flag
-   * 
-   * 4. PRIVATE DECRYPTION (Step 4):
-   *    - Use requestUserDecryption() to decrypt the result
-   *    - Requires user signature (MetaMask popup)
-   *    - Return decrypted score and isHighest flag
-   * 
-   * 5. ERROR HANDLING (Step 5):
-   *    - Handle user rejection (wallet popup closed)
-   *    - Handle transaction failures
-   *    - Provide helpful error messages via toasts
-   */
   const submitPotion = useCallback(async (vaultCode: number[]) => {
     if (!address || !walletClient || !publicClient) {
       toast({
@@ -130,23 +82,6 @@ export function usePotionContract() {
       throw new Error("Wallet not connected");
     }
     
-    // TODO: Implement full potion submission flow
-    // This is the most complex function - take it step by step!
-    
-    // Mock response for development (remove when implementing)
-    toast({
-      title: "🧪 Mock Brewing",
-      description: "This is a mock response. Implement the real flow!",
-    });
-    
-    // Simulate a random score
-    const mockScore = Math.floor(Math.random() * 200) + 50;
-    return { 
-      decrypted: mockScore.toString(), 
-      isHighest: Math.random() > 0.7 
-    };
-    
-    /* ORIGINAL CODE FOR DOCUMENTATION:
     try {
       setIsLoading(true);
 
@@ -250,7 +185,6 @@ export function usePotionContract() {
     } finally {
       setIsLoading(false);
     }
-    */
   }, [address, walletClient, publicClient, toast]);
 
   return {
